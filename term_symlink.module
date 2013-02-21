@@ -1,0 +1,112 @@
+<?php
+
+/**
+* @file
+* Lets users to assign some term to be a "symbolic link" of another term.
+*
+* Suppose we need Photographers term to be a child of both Services and
+* Job Seekers terms. We can make Photographers a child of Job Seekers, then
+* create new term Photo as a child of Services and assign Photo as symbolic
+* link of Photographers. Then a visitor when clicking on Photo will be
+* redirected to Photographers. When an editor adds Photo term to a node,
+* the Photographers will be assigned. So Photographers is usual term and
+* Photo is virtual, that can not correspond any node but redirects all
+* requests to Photographers.
+*/
+
+
+function term_symlink_menu() {
+
+  $items = array();
+
+  $items['admin/structure/taxonomy/term_symlink'] = array(
+    'title' => 'Term Symlink module settings',
+    'description' => 'Description of your On this date settings page',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('term_symlink_admin_settings'),
+    'access arguments' => array('administer vocabularies and terms'),
+    'type' => MENU_NORMAL_ITEM,
+    'file' => 'term_symlink.admin.inc',
+    'file path' => drupal_get_path('module', 'term_symlink'),
+  );
+
+  $items['admin/term_symlink/autocomplete_callback'] = array(
+    'page callback' => 'term_symlink_autocomplete_callback',
+    'file' => 'term_symlink.admin.inc',
+    'type' => MENU_CALLBACK,
+    'access arguments' => array('administer vocabularies and terms'),
+  );
+
+  return $items;
+}
+
+
+function term_symlink_help($path, $arg) {
+  switch ($path) {
+    case 'admin/help#term_symlink':
+      return t('Make some taxonomy term an alias for another.');
+  }
+}
+
+function term_symlink_permission() {
+  $arr['administer taxonomy term symlinks'] = array('title' => t('Administer taxonomy term symlinks'), 'description' => '');
+  return $arr;
+}
+
+function term_symlink_init() {
+  if ( arg(0)=='taxonomy' && arg(1)=='term' && is_numeric(arg(2)) ) {
+    $term_symlink= variable_get('term_symlink', array());
+    if ( isset($term_symlink[arg(2)]) ) {
+      drupal_goto(drupal_get_path_alias('taxonomy/term/' . $term_symlink[arg(2)]));
+      return;
+    }
+  }
+}
+
+
+function term_symlink_node_presave($node) {
+  $vocabularies= taxonomy_get_vocabularies();
+  $term_symlink= variable_get('term_symlink', array());
+  $tids= $term_symlink + array_keys($term_symlink);
+  $term= taxonomy_term_load_multiple($tids);
+
+/*
+
+reassigning terms:
+1. In case symlink term and target term belong to different vocabularies
+   we will not reassugn but remove symlink term from a node and show notification.
+
+2. In case term and target term belong to the same vocabulary, we replace node field.
+   So, symlink term does not be assigned to any node but the target term does.
+   
+   
+
+*/
+  $fields= field_info_instances('node', $node->type);
+
+    if ($fields) foreach ($fields as $instance) {
+    $field_name = $instance['field_name'];
+    $field = field_info_field($field_name);
+    if ('taxonomy' == $field['module']&& 'field_sql_storage' == $field['storage']['type']) {
+      
+      if ($node_term= $node->$field_name) foreach (array_keys($node_term) as $lang) {
+        foreach ($node_term[$lang] as $i => $t ) {
+          if ( isset($term_symlink[ $t['tid'] ]) ) {
+            $names= array('@from' => $term[ $t['tid'] ]->name, '@to' => $term[$term_symlink[ $t['tid'] ]]->name);
+            if ( $term[ $t['tid'] ]->vid == $term[$term_symlink[ $t['tid'] ]]->vid ) {
+              $node->{$field_name}[$lang][$i]['tid']= $term[$term_symlink[ $t['tid'] ]]->tid;
+              $node->{$field_name}[$lang][$i]['name']= $term[$term_symlink[ $t['tid'] ]]->name;
+              drupal_set_message(t('Term @from has been replaced with @to', $names));
+            }
+            else {
+              unset( $node->$field_name[$lang][$i] );
+              drupal_set_message(t('Term @from has been unlinked from node as link and target terms belong to different vocabularies. Please assign @to instead of @from', $names), 'warning');
+            }
+          }
+        }
+      }
+
+    }
+  }
+
+}

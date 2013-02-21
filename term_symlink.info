@@ -1,0 +1,12 @@
+name = Term Symlink
+description = Make some taxonomy terms behave like symbolic links for another term so a term can be child of two or more parents.
+
+core = 7.x
+package = Custom
+
+configure = admin/structure/taxonomy/term_symlink
+
+dependencies[] = taxonomy
+
+files[] = term_symlink.module
+files[] = term_symlink.admin.inc
