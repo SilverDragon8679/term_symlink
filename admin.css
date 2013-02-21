@@ -1,0 +1,3 @@
+form#term-symlink-admin-settings #edit-saved-symlinks {position: absolute; left: 400px; width: 360px;}
+form#term-symlink-admin-settings #edit-delete-button {margin-top: 20px;}
+form#term-symlink-admin-settings .form-item-link, form#term-symlink-admin-settings .form-item-target {width: 360px;}
