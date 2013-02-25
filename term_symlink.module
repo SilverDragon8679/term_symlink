@@ -21,7 +21,7 @@ function term_symlink_menu() {
 
   $items['admin/structure/taxonomy/term_symlink'] = array(
     'title' => 'Term Symlink module settings',
-    'description' => 'Description of your On this date settings page',
+    'description' => 'Lets users to appoint some term as "symbolic link" of another term',
     'page callback' => 'drupal_get_form',
     'page arguments' => array('term_symlink_admin_settings'),
     'access arguments' => array('administer vocabularies and terms'),
